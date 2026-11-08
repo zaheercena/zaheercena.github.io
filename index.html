@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Black Friday Rush</title>
+<meta name="description" content="Keep an online store running through a midnight Black Friday sale. A small architecture game by Zaheer Ahmad.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%92%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#EAF0F6; --grid:#D6E1EC; --ink:#14365F; --ink-soft:#56708F;
+  --node:#FFFFFF; --line:#9FB4CD; --static:#1C7FC0; --browse:#1F8A55;
+  --checkout:#C98F00; --fail:#D3263B; --btn:#14365F; --btn-text:#FFFFFF;
+  --scrim:rgba(20,54,95,.42); --sheet:#FFFFFF;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#0D2440; --grid:#15335A; --ink:#E4EDF7; --ink-soft:#93AAC6;
+    --node:#122F52; --line:#3E5F87; --static:#53B5F2; --browse:#43C483;
+    --checkout:#F4C232; --fail:#FF5E6E; --btn:#E4EDF7; --btn-text:#0D2440;
+    --scrim:rgba(4,14,28,.62); --sheet:#132F51;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#0D2440; --grid:#15335A; --ink:#E4EDF7; --ink-soft:#93AAC6;
+  --node:#122F52; --line:#3E5F87; --static:#53B5F2; --browse:#43C483;
+  --checkout:#F4C232; --fail:#FF5E6E; --btn:#E4EDF7; --btn-text:#0D2440;
+  --scrim:rgba(4,14,28,.62); --sheet:#132F51;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;height:100%;display:flex;flex-direction:column;
+  background:var(--paper);color:var(--ink);font-family:var(--body);
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--checkout);outline-offset:2px}
+
+/* HUD */
+.hud{
+  display:flex;align-items:center;gap:clamp(10px,2.4vw,28px);
+  padding:10px clamp(12px,3vw,28px);border-bottom:1.5px solid var(--line);
+  font-variant-numeric:tabular-nums;flex-wrap:wrap;row-gap:6px;
+}
+.clock{font-family:var(--display);font-weight:800;font-size:clamp(26px,5vw,38px);line-height:1;letter-spacing:.01em}
+.clock small{display:block;font-family:var(--body);font-weight:500;font-size:12px;color:var(--ink-soft);letter-spacing:0;margin-top:3px}
+.stat{display:flex;flex-direction:column;min-width:64px}
+.stat b{font-family:var(--display);font-weight:700;font-size:clamp(19px,3.4vw,24px);line-height:1.05}
+.stat span{font-size:12px;color:var(--ink-soft)}
+.health{flex:1;min-width:120px;max-width:280px}
+.bar{height:10px;border-radius:5px;background:var(--grid);overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;width:100%;background:var(--browse);border-radius:5px;transition:width .2s linear}
+.hud .spacer{flex:1}
+.icon-btn{
+  border:1.5px solid var(--line);background:transparent;border-radius:8px;
+  padding:7px 12px;font-weight:600;font-size:14px;cursor:pointer;
+}
+.icon-btn:hover{border-color:var(--ink)}
+
+/* Board */
+.board{position:relative;flex:1;min-height:0}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:manipulation;cursor:pointer}
+.banner{
+  position:absolute;left:50%;top:12px;transform:translateX(-50%);
+  background:var(--sheet);border:1.5px solid var(--ink);border-radius:10px;
+  padding:9px 14px 10px;min-width:min(340px,90vw);max-width:92vw;
+  box-shadow:0 6px 0 var(--grid);pointer-events:none;
+}
+.banner[hidden]{display:none}
+.banner strong{font-family:var(--display);font-weight:700;font-size:20px;display:block;line-height:1.1}
+.banner p{margin:2px 0 0;font-size:14px;color:var(--ink-soft)}
+.banner .bar{height:5px;margin-top:8px}
+.banner .bar i{background:var(--fail)}
+.banner.warn{border-style:dashed}
+.hint{
+  position:absolute;left:0;right:0;bottom:10px;text-align:center;
+  font-size:14px;color:var(--ink-soft);pointer-events:none;padding:0 16px;
+}
+
+/* Sheet */
+.scrim{position:fixed;inset:0;background:transparent;z-index:20}
+.scrim[hidden]{display:none}
+.sheet{
+  position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:21;
+  width:min(440px,100%);background:var(--sheet);color:var(--ink);
+  border:1.5px solid var(--ink);border-bottom:0;border-radius:16px 16px 0 0;
+  padding:18px 20px calc(18px + env(safe-area-inset-bottom,0px));
+  box-shadow:0 -8px 0 var(--grid);
+}
+.sheet[hidden]{display:none}
+.sheet h2{font-family:var(--display);font-weight:800;font-size:28px;margin:0;line-height:1.05}
+.sheet .desc{margin:6px 0 12px;line-height:1.45;color:var(--ink-soft);max-width:60ch}
+.sheet dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0 0 16px;font-variant-numeric:tabular-nums}
+.sheet dt{color:var(--ink-soft)}
+.sheet dd{margin:0;font-weight:600}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.btn{
+  border:0;background:var(--btn);color:var(--btn-text);border-radius:8px;
+  padding:12px 18px;font-weight:600;font-size:16px;cursor:pointer;
+}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.danger{background:transparent;color:var(--fail);border:1.5px solid var(--fail)}
+
+/* Overlays */
+.overlay{
+  position:fixed;inset:0;z-index:30;background:var(--scrim);
+  display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;
+}
+.overlay[hidden]{display:none}
+.card{
+  background:var(--sheet);border:1.5px solid var(--ink);border-radius:14px;
+  width:min(520px,100%);padding:clamp(20px,4vw,32px);box-shadow:0 10px 0 var(--grid);
+  max-height:100%;overflow:auto;
+}
+.title{font-family:var(--display);font-weight:800;font-size:clamp(46px,11vw,72px);line-height:.88;margin:0;letter-spacing:-.01em}
+.title .tag{
+  display:inline-block;font-size:.42em;vertical-align:.55em;margin-left:.2em;
+  background:var(--checkout);color:#14365F;border-radius:4px 14px 14px 4px;padding:.12em .5em .1em .45em;letter-spacing:0;
+}
+.lede{font-size:17px;line-height:1.45;margin:14px 0 16px;max-width:46ch}
+.rules{margin:0 0 18px;padding-left:20px;line-height:1.5}
+.rules li{margin:4px 0}
+.legend{display:grid;gap:8px;margin:0 0 22px;padding:12px 14px;border:1.5px dashed var(--line);border-radius:10px}
+.legend div{display:flex;align-items:center;gap:10px;font-size:15px}
+.legend svg{flex:none}
+.foot{margin:18px 0 0;font-size:13px;color:var(--ink-soft);line-height:1.5}
+.grade{
+  font-family:var(--display);font-weight:800;font-size:96px;line-height:.8;float:right;
+  margin:-4px 0 0 16px;color:var(--ink);
+}
+.end-title{font-family:var(--display);font-weight:800;font-size:clamp(32px,7vw,44px);line-height:1;margin:0}
+.report{display:grid;grid-template-columns:1fr auto;gap:6px 18px;margin:18px 0;font-variant-numeric:tabular-nums;clear:both}
+.report dt{color:var(--ink-soft)}
+.report dd{margin:0;font-weight:600;text-align:right}
+.report .total{border-top:1.5px solid var(--line);padding-top:8px;font-family:var(--display);font-size:22px;font-weight:700;color:var(--ink)}
+.built{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px;padding:0;list-style:none}
+.built li{border:1.5px solid var(--line);border-radius:6px;padding:3px 9px;font-size:14px}
+.lesson{border-left:4px solid var(--checkout);padding:6px 0 6px 12px;margin:0 0 20px;line-height:1.45}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:520px){
+  .hud{gap:12px}
+  .hud .stat.opt,.hud .spacer{display:none}
+  .clock{font-size:26px}
+  .stat{min-width:0}
+  .icon-btn{margin-left:auto}
+  .health{order:5;flex-basis:100%;max-width:none}
+}
+</style>
+</head>
+<body>
+
+<header class="hud" aria-label="Store status">
+  <div class="clock" id="clock">23:58:00<small id="phase">Sale starts at midnight</small></div>
+  <div class="stat"><b id="cash">$600</b><span>Cash</span></div>
+  <div class="stat"><b id="uptime">100%</b><span>Uptime</span></div>
+  <div class="stat opt"><b id="rps">0</b><span>Requests/s</span></div>
+  <div class="stat opt"><b id="orders">0</b><span>Orders</span></div>
+  <div class="stat health"><span>Store health <b id="healthNum" style="font-size:12px;font-family:var(--body);font-weight:600">100</b></span><div class="bar"><i id="healthBar"></i></div></div>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause game">Pause</button>
+</header>
+
+<main class="board" id="board">
+  <canvas id="c" aria-label="Game board. Use the build buttons that appear when you select a slot." role="img"></canvas>
+  <div class="banner" id="banner" hidden role="status" aria-live="polite">
+    <strong id="bannerTitle"></strong><p id="bannerText"></p><div class="bar"><i id="bannerBar"></i></div>
+  </div>
+  <div class="hint" id="hint">Tap a dashed slot to build. Orders pay for everything.</div>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" hidden role="dialog" aria-modal="false" aria-labelledby="sheetTitle">
+  <h2 id="sheetTitle"></h2>
+  <p class="desc" id="sheetDesc"></p>
+  <dl id="sheetStats"></dl>
+  <div class="actions" id="sheetActions"></div>
+</section>
+
+<div class="overlay" id="startScreen">
+  <div class="card" role="dialog" aria-labelledby="startTitle">
+    <h1 class="title" id="startTitle">Black Friday Rush<span class="tag">00:00</span></h1>
+    <p class="lede">It’s 23:58. The midnight sale opens in two minutes and every shopper arrives at once. Keep the store online until 00:15.</p>
+    <ul class="rules">
+      <li>Tap a dashed slot to build infrastructure. Completed orders pay for it.</li>
+      <li>Everything you build costs money to run each second, so build what you need.</li>
+      <li>Failed requests lower store health. At zero, the store goes down.</li>
+    </ul>
+    <div class="legend" aria-label="Request types">
+      <div><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="4" y="4" width="10" height="10" rx="1.5" fill="var(--static)"/></svg>Images and stylesheets</div>
+      <div><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="var(--browse)"/></svg>Product page views</div>
+      <div><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 L16 9 L9 16 L2 9Z" fill="var(--checkout)"/></svg>Checkouts, the only requests that make money</div>
+    </div>
+    <button class="btn" id="startBtn" type="button">Open the store</button>
+    <p class="foot"><span id="bestLine"></span>Built by <a href="https://www.linkedin.com/in/zaheercena/" target="_blank" rel="noopener">Zaheer Ahmad</a>, Solutions Architect. <a href="https://github.com/zaheercena" target="_blank" rel="noopener">GitHub</a></p>
+  </div>
+</div>
+
+<div class="overlay" id="pauseScreen" hidden>
+  <div class="card" role="dialog" aria-labelledby="pauseTitle" style="width:min(360px,100%)">
+    <h2 class="end-title" id="pauseTitle">Paused</h2>
+    <p class="lede" style="margin-bottom:20px">Traffic is frozen. Your servers aren’t.</p>
+    <div class="actions"><button class="btn" id="resumeBtn" type="button">Resume</button><button class="btn ghost" id="restartBtn" type="button">Restart</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="endScreen" hidden>
+  <div class="card" role="dialog" aria-labelledby="endTitle">
+    <div class="grade" id="grade" aria-label="Grade">A</div>
+    <h2 class="end-title" id="endTitle">You survived Black Friday</h2>
+    <p style="margin:8px 0 0;color:var(--ink-soft)" id="endSub"></p>
+    <dl class="report" id="report"></dl>
+    <div style="font-weight:600;font-size:15px">What you built</div>
+    <ul class="built" id="builtList"></ul>
+    <p class="lesson" id="lesson"></p>
+    <div class="actions"><button class="btn" id="againBtn" type="button">Play again</button></div>
+    <p class="foot">Built by <a href="https://www.linkedin.com/in/zaheercena/" target="_blank" rel="noopener">Zaheer Ahmad</a>, Solutions Architect. Inspired by real peak-traffic architecture. <a href="https://github.com/zaheercena" target="_blank" rel="noopener">GitHub</a></p>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- Config ---------- */
+const WARMUP = 20;            // real seconds before midnight
+const SALE = 150;             // real seconds of sale
+const CLOCK_SCALE = 6;        // game seconds per real second
+const START_CASH = 600;
+const PATIENCE = 5;           // seconds a shopper waits in a queue
+const SPEED = 0.85;           // flow units per second
+const SERVER_QCAP = 30, DB_QCAP = 50;
+const MIX = [['static', .40], ['browse', .45], ['checkout', .15]];
+const CACHE_TARGET = .85;
+
+const CATALOG = {
+  cdn:     { name: 'CDN edge', cost: 500, run: 2,
+             desc: 'Serves images and stylesheets from the edge, so those requests never reach your servers.' },
+  lb:      { name: 'Load balancer', cost: 300, run: 1,
+             desc: 'Spreads traffic across every server you build. Without it, all traffic goes to the first server.' },
+  server:  { name: 'App server', cost: 400, run: 3, cap: 12,
+             desc: 'Handles page views and checkouts. Each server processes about 12 units of work per second.' },
+  cache:   { name: 'Redis cache', cost: 450, run: 2,
+             desc: 'Answers repeat product-page reads so they don’t reach the database. Needs a few seconds to warm up.' },
+  replica: { name: 'Read replica', cost: 600, run: 3, cap: 30,
+             desc: 'Takes product-page reads off the main database, leaving it free to save orders.' },
+  db:      { name: 'Database', run: 2, cap: 25, upCost: 700, upRun: 3, upCap: 45,
+             desc: 'Saves every order. Product-page reads and order writes share its capacity.' },
+};
+
+const EVENT_DEFS = {
+  influencer: { title: 'Influencer post', text: 'A creator just shared the sale. Traffic nearly doubles.', dur: 10 },
+  coldcache:  { title: 'Deploy flushed the cache', text: 'Every product-page read hits the database until the cache warms up again.', dur: 0 },
+  gateway:    { title: 'Payment gateway is slow', text: 'Each checkout ties up your servers 2.5× longer.', dur: 12 },
+};
+
+/* ---------- DOM ---------- */
+const $ = id => document.getElementById(id);
+const canvas = $('c'), ctx = canvas.getContext('2d');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const darkMQ = matchMedia('(prefers-color-scheme: dark)');
+
+/* ---------- Storage (best score) ---------- */
+const store = (() => {
+  let mem = {};
+  return {
+    get(k) { try { const v = localStorage.getItem(k); return v === null ? mem[k] ?? null : v; } catch { return mem[k] ?? null; } },
+    set(k, v) { mem[k] = String(v); try { localStorage.setItem(k, String(v)); } catch {} },
+  };
+})();
+const bestScore = () => parseInt(store.get('bfr-best') || '0', 10) || 0;
+
+/* ---------- Nodes ---------- */
+// u = position along the flow (0 start, 1 end), v = across the flow
+const N = {
+  internet: { id: 'internet', kind: 'internet', u: .04, v: .5, built: true },
+  cdn:      { id: 'cdn', kind: 'cdn', slot: true, u: .19, v: .5 },
+  lb:       { id: 'lb', kind: 'lb', slot: true, u: .335, v: .5 },
+  s0:       { id: 's0', kind: 'server', slot: true, u: .52, v: .12 },
+  s1:       { id: 's1', kind: 'server', slot: true, u: .52, v: .37 },
+  s2:       { id: 's2', kind: 'server', slot: true, u: .52, v: .63 },
+  s3:       { id: 's3', kind: 'server', slot: true, u: .52, v: .88 },
+  cache:    { id: 'cache', kind: 'cache', slot: true, u: .695, v: .2 },
+  db:       { id: 'db', kind: 'db', u: .835, v: .5, built: true },
+  replica:  { id: 'replica', kind: 'replica', slot: true, u: .835, v: .84 },
+  orders:   { id: 'orders', kind: 'orders', u: .965, v: .5, built: true },
+};
+const SERVERS = [N.s0, N.s1, N.s2, N.s3];
+const ALL = Object.values(N);
+
+/* ---------- State ---------- */
+let S = null;
+let running = false, paused = false, over = false;
+
+function freshState() {
+  ALL.forEach(n => {
+    if (n.slot) n.built = false;
+    n.queue = []; n.used = 0; n.util = 0; n.flash = 0;
+  });
+  N.s0.built = true;
+  N.db.upgraded = false;
+  const r = (a, b) => a + Math.random() * (b - a);
+  return {
+    t: 0, cash: START_CASH, health: 100, lastFail: -9,
+    reqs: [], fx: [], spawnAcc: 0, hitRate: 0, lastMoneyFx: 0,
+    served: 0, failed: 0, orders: 0, revenue: 0, cost: 0,
+    spawnTimes: [], rps: 0, peakRps: 0,
+    failsAt: { server: 0, db: 0, replica: 0 },
+    built: new Set(['App server', 'Database']),
+    events: [
+      { id: 'influencer', at: r(36, 44) },
+      { id: 'coldcache',  at: r(66, 74) },
+      { id: 'gateway',    at: r(95, 102) },
+      { id: 'influencer', at: r(122, 127) },
+    ].map(e => ({ ...e, ...EVENT_DEFS[e.id], state: 'pending' })),
+    active: {},
+    crashedAt: null,
+  };
+}
+
+/* ---------- Layout ---------- */
+let W = 0, H = 0, DPR = 1, portrait = false, nodeW = 80, nodeH = 50, pad = 40, gridCanvas = null;
+let colors = {};
+
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  ['paper','grid','ink','ink-soft','node','line','static','browse','checkout','fail'].forEach(k => {
+    colors[k] = cs.getPropertyValue('--' + k).trim();
+  });
+  buildGrid();
+}
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = Math.max(1, rect.width); H = Math.max(1, rect.height);
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  portrait = H > W * 1.05;
+  if (portrait) {
+    nodeW = Math.max(60, Math.min(96, W * .185));
+    nodeH = Math.round(nodeW * .72);
+    pad = nodeW / 2 + 8;
+  } else {
+    nodeW = Math.max(72, Math.min(124, Math.min(W * .62, H) * .17));
+    nodeH = Math.round(nodeW * .62);
+    pad = Math.max(nodeW * .62, 30);
+  }
+  buildGrid();
+}
+
+function buildGrid() {
+  if (!W) return;
+  gridCanvas = document.createElement('canvas');
+  gridCanvas.width = canvas.width; gridCanvas.height = canvas.height;
+  const g = gridCanvas.getContext('2d');
+  g.scale(DPR, DPR);
+  g.fillStyle = colors.paper; g.fillRect(0, 0, W, H);
+  g.strokeStyle = colors.grid; g.lineWidth = 1;
+  const step = 24;
+  g.beginPath();
+  for (let x = .5; x < W; x += step) { g.moveTo(x, 0); g.lineTo(x, H); }
+  for (let y = .5; y < H; y += step) { g.moveTo(0, y); g.lineTo(W, y); }
+  g.stroke();
+}
+
+function pos(n) {
+  const topPad = pad + (portrait ? 18 : 0);
+  if (portrait) return { x: pad + n.v * (W - 2 * pad), y: topPad + n.u * (H - topPad - pad - 26) };
+  return { x: pad + n.u * (W - 2 * pad), y: pad + 34 + n.v * (H - 2 * pad - 60) };
+}
+function boxOf(n) {
+  const p = pos(n);
+  let w = nodeW, h = nodeH;
+  if (n.kind === 'internet' || n.kind === 'orders') { w = nodeW * .92; h = nodeH * .78; }
+  return { x: p.x - w / 2, y: p.y - h / 2, w, h, cx: p.x, cy: p.y };
+}
+
+/* ---------- Routing helpers ---------- */
+const builtServers = () => SERVERS.filter(s => s.built);
+const firstServer = () => builtServers()[0];
+const afterCdn = () => (N.lb.built ? N.lb : firstServer());
+const readDb = () => (N.replica.built ? N.replica : N.db);
+function pickServer() {
+  const list = builtServers();
+  if (!N.lb.built) return list[0];
+  let best = list[0], bestLoad = Infinity;
+  for (const s of list) {
+    const load = s.queue.length + Math.random() * .5;
+    if (load < bestLoad) { bestLoad = load; best = s; }
+  }
+  return best;
+}
+function capOf(n) {
+  if (n.kind === 'server') return CATALOG.server.cap;
+  if (n.kind === 'replica') return CATALOG.replica.cap;
+  if (n.kind === 'db') return n.upgraded ? CATALOG.db.upCap : CATALOG.db.cap;
+  return Infinity;
+}
+function workFor(req, n) {
+  if (n.kind === 'server') {
+    if (req.type === 'static') return .5;
+    if (req.type === 'browse') return 1;
+    return 2 * (S.active.gateway ? 2.5 : 1);
+  }
+  return req.type === 'checkout' ? 2 : 1;
+}
+
+/* ---------- Request lifecycle ---------- */
+function rate(t) {
+  if (t < WARMUP) return 4;
+  const s = t - WARMUP;
+  let r = 12 + 24 * Math.min(1, s / SALE);
+  if (S.active.influencer) r *= 1.9;
+  return r;
+}
+function pickType() {
+  let x = Math.random();
+  for (const [k, p] of MIX) { if ((x -= p) < 0) return k; }
+  return 'browse';
+}
+function spawn() {
+  const req = { type: pickType(), from: N.internet, to: null, t: 0, dur: 1, enq: 0, rem: undefined };
+  S.reqs.push(req);
+  moveTo(req, N.internet, N.cdn.built ? N.cdn : afterCdn());
+  S.spawnTimes.push(S.t);
+}
+function moveTo(req, from, to) {
+  req.from = from; req.to = to; req.t = 0;
+  const du = to.u - from.u, dv = to.v - from.v;
+  req.dur = Math.max(.12, Math.hypot(du, dv) / SPEED);
+  if (!S.reqs.includes(req)) S.reqs.push(req);
+}
+function succeed(req, n, money) {
+  S.served++;
+  if (money) {
+    const value = Math.round(10 + Math.random() * 15);
+    S.cash += value; S.revenue += value; S.orders++;
+    if (S.t - S.lastMoneyFx > .35) { addFx('money', n, `+$${value}`); S.lastMoneyFx = S.t; }
+  } else if (!reduceMotion && Math.random() < .5) addFx('ring', n, req.type);
+}
+function fail(req, n) {
+  S.failed++;
+  S.health -= req.type === 'checkout' ? 1.5 : .5;
+  S.lastFail = S.t;
+  if (n && S.failsAt[n.kind] !== undefined) S.failsAt[n.kind]++;
+  n.flash = 1;
+  addFx('fail', n);
+}
+function addFx(kind, n, data) {
+  if (S.fx.length > 140) return;
+  const jitter = () => (Math.random() - .5) * nodeW * .5;
+  S.fx.push({ kind, n, data, t: 0, dx: jitter(), dy: jitter() * .5 });
+}
+
+function arrive(req, n) {
+  // Component removed while the request was travelling to it
+  if (n.slot && !n.built) {
+    if (n.kind === 'server' || n.kind === 'lb') return moveTo(req, n, pickServer());
+    if (n.kind === 'cdn') return moveTo(req, n, afterCdn());
+    if (n.kind === 'cache') return moveTo(req, n, readDb());
+    if (n.kind === 'replica') return moveTo(req, n, N.db);
+  }
+  switch (n.kind) {
+    case 'cdn':
+      if (req.type === 'static') { drop(req); return succeed(req, n); }
+      return moveTo(req, n, afterCdn());
+    case 'lb':
+      return moveTo(req, n, pickServer());
+    case 'server':
+    case 'db':
+    case 'replica': {
+      drop(req);
+      const cap = n.kind === 'server' ? SERVER_QCAP : DB_QCAP;
+      if (n.queue.length >= cap) return fail(req, n);
+      req.enq = S.t; req.rem = undefined;
+      n.queue.push(req);
+      return;
+    }
+    case 'cache':
+      if (Math.random() < S.hitRate) { drop(req); return succeed(req, n); }
+      return moveTo(req, n, readDb());
+    case 'orders':
+      drop(req); return succeed(req, n, true);
+  }
+}
+function drop(req) {
+  const i = S.reqs.indexOf(req);
+  if (i >= 0) S.reqs.splice(i, 1);
+}
+function processed(req, n) {
+  if (n.kind === 'server') {
+    if (req.type === 'static') return succeed(req, n);
+    if (req.type === 'browse') return moveTo(req, n, N.cache.built ? N.cache : readDb());
+    return moveTo(req, n, N.db);
+  }
+  if (n.kind === 'db' && req.type === 'checkout') return moveTo(req, n, N.orders);
+  return succeed(req, n);
+}
+
+/* ---------- Simulation step ---------- */
+function step(dt) {
+  S.t += dt;
+  const t = S.t;
+
+  // Events
+  if (t >= WARMUP) {
+    const s = t - WARMUP;
+    for (const e of S.events) {
+      if (e.state === 'pending' && s >= e.at - 3) e.state = 'warning';
+      if (e.state === 'warning' && s >= e.at) {
+        e.state = e.dur ? 'active' : 'done';
+        e.until = e.at + e.dur;
+        if (e.id === 'coldcache') {
+          if (N.cache.built) S.hitRate = 0;
+          else e.text = 'You have no cache, so the database was already taking every read.';
+          e.shownUntil = e.at + 4;
+        } else S.active[e.id] = true;
+      }
+      if (e.state === 'active' && s >= e.until) { e.state = 'done'; S.active[e.id] = false; }
+    }
+  }
+
+  // Spawning
+  S.spawnAcc += rate(t) * dt;
+  while (S.spawnAcc >= 1) { S.spawnAcc -= 1; if (S.reqs.length < 700) spawn(); }
+  while (S.spawnTimes.length && S.spawnTimes[0] < t - 1) S.spawnTimes.shift();
+  S.rps = S.spawnTimes.length;
+  if (t > WARMUP) S.peakRps = Math.max(S.peakRps, S.rps);
+
+  // Cache warm-up
+  if (N.cache.built) S.hitRate = Math.min(CACHE_TARGET, S.hitRate + dt * .11);
+  else S.hitRate = 0;
+
+  // Move requests
+  for (let i = S.reqs.length - 1; i >= 0; i--) {
+    const r = S.reqs[i];
+    r.t += dt / r.dur;
+    if (r.t >= 1) arrive(r, r.to);
+  }
+
+  // Process queues
+  for (const n of ALL) {
+    if (!n.queue) continue;
+    if (n.queue.length) {
+      // Shoppers give up after waiting too long
+      for (let i = n.queue.length - 1; i >= 0; i--) {
+        if (t - n.queue[i].enq > PATIENCE) { const [r] = n.queue.splice(i, 1); fail(r, n); }
+      }
+    }
+    if (!n.built || capOf(n) === Infinity) { n.util += (0 - n.util) * Math.min(1, dt * 3); continue; }
+    let budget = capOf(n) * dt, used = 0;
+    while (budget > 1e-9 && n.queue.length) {
+      const head = n.queue[0];
+      if (head.rem === undefined) head.rem = workFor(head, n);
+      const take = Math.min(budget, head.rem);
+      head.rem -= take; budget -= take; used += take;
+      if (head.rem <= 1e-9) { n.queue.shift(); head.rem = undefined; processed(head, n); }
+    }
+    n.util += (used / (capOf(n) * dt) - n.util) * Math.min(1, dt * 3);
+    n.flash = Math.max(0, n.flash - dt * 2.5);
+  }
+
+  // Running costs
+  const run = runCost();
+  S.cash -= run * dt; S.cost += run * dt;
+
+  // Health
+  if (t - S.lastFail > 1.5) S.health = Math.min(100, S.health + 2 * dt);
+  if (S.health <= 0) { S.health = 0; return finish(false); }
+  if (t >= WARMUP + SALE) return finish(true);
+
+  // FX
+  for (let i = S.fx.length - 1; i >= 0; i--) {
+    const f = S.fx[i]; f.t += dt;
+    const life = f.kind === 'money' ? 1 : f.kind === 'fail' ? .6 : .4;
+    if (f.t > life) S.fx.splice(i, 1);
+  }
+}
+
+function runCost() {
+  let c = CATALOG.db.run + (N.db.upgraded ? CATALOG.db.upRun : 0);
+  if (N.cdn.built) c += CATALOG.cdn.run;
+  if (N.lb.built) c += CATALOG.lb.run;
+  if (N.cache.built) c += CATALOG.cache.run;
+  if (N.replica.built) c += CATALOG.replica.run;
+  c += builtServers().length * CATALOG.server.run;
+  return c;
+}
+
+/* ---------- Drawing ---------- */
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, r);
+  else { ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+}
+function edges() {
+  const E = [];
+  const add = (a, b) => { if (a && b && !E.some(([x, y]) => x === a && y === b)) E.push([a, b]); };
+  const entry = afterCdn();
+  if (N.cdn.built) { add(N.internet, N.cdn); add(N.cdn, entry); } else add(N.internet, entry);
+  const list = builtServers();
+  if (N.lb.built) list.forEach(s => add(N.lb, s));
+  list.forEach(s => { add(s, N.cache.built ? N.cache : readDb()); add(s, N.db); });
+  if (N.cache.built) add(N.cache, readDb());
+  add(N.db, N.orders);
+  return E;
+}
+function label(n) {
+  if (n.kind === 'internet') return 'Shoppers';
+  if (n.kind === 'orders') return 'Orders';
+  if (n.kind === 'server') return 'App server';
+  return CATALOG[n.kind].name;
+}
+
+function draw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (gridCanvas) ctx.drawImage(gridCanvas, 0, 0, W, H);
+  else { ctx.fillStyle = colors.paper; ctx.fillRect(0, 0, W, H); }
+  if (!S) return;
+
+  const fs = Math.max(11, Math.min(15, nodeW * .13));
+
+  // Wires
+  ctx.strokeStyle = colors.line; ctx.lineWidth = 1.5;
+  for (const [a, b] of edges()) {
+    const p = pos(a), q = pos(b);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+  }
+
+  // Nodes
+  for (const n of ALL) drawNode(n, fs);
+
+  // Requests
+  for (const r of S.reqs) {
+    const p = pos(r.from), q = pos(r.to);
+    const k = Math.min(1, r.t);
+    const x = p.x + (q.x - p.x) * k, y = p.y + (q.y - p.y) * k;
+    ctx.fillStyle = colors[r.type];
+    const s = Math.max(3, nodeW * .042);
+    if (r.type === 'static') { ctx.fillRect(x - s, y - s, s * 2, s * 2); }
+    else if (r.type === 'browse') { ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.beginPath(); ctx.moveTo(x, y - s * 1.4); ctx.lineTo(x + s * 1.4, y); ctx.lineTo(x, y + s * 1.4); ctx.lineTo(x - s * 1.4, y); ctx.closePath(); ctx.fill(); }
+  }
+
+  // FX
+  for (const f of S.fx) {
+    const b = boxOf(f.n);
+    if (f.kind === 'ring') {
+      const k = f.t / .4;
+      ctx.strokeStyle = colors[f.data]; ctx.globalAlpha = 1 - k; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(b.cx + f.dx, b.y - 8 - k * 6, 3 + k * 7, 0, Math.PI * 2); ctx.stroke();
+    } else if (f.kind === 'fail') {
+      const k = f.t / .6, s = 5;
+      const x = b.cx + f.dx, y = b.y - 8 - k * 14;
+      ctx.strokeStyle = colors.fail; ctx.globalAlpha = 1 - k; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x - s, y - s); ctx.lineTo(x + s, y + s); ctx.moveTo(x + s, y - s); ctx.lineTo(x - s, y + s); ctx.stroke();
+    } else if (f.kind === 'money') {
+      const k = f.t;
+      ctx.globalAlpha = 1 - k; ctx.fillStyle = colors.checkout;
+      ctx.font = `700 ${fs + 3}px ${getComputedStyle(document.documentElement).getPropertyValue('--display')}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(f.data, b.cx + f.dx, b.y - 6 - k * 26);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function fitText(text, x, y, maxW, weight, size) {
+  let f = size;
+  ctx.font = `${weight} ${f}px Barlow, system-ui, sans-serif`;
+  while (f > 8 && ctx.measureText(text).width > maxW) { f -= .5; ctx.font = `${weight} ${f}px Barlow, system-ui, sans-serif`; }
+  ctx.fillText(text, x, y);
+}
+function drawNode(n, fs) {
+  const b = boxOf(n);
+  const maxW = b.w - 10;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+  if (n.slot && !n.built) {
+    const cost = CATALOG[n.kind].cost;
+    const afford = S.cash >= cost;
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+    ctx.strokeStyle = afford ? colors.ink : colors.line;
+    ctx.fillStyle = colors.paper;
+    rr(b.x, b.y, b.w, b.h, 9); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = afford ? colors.ink : colors['ink-soft'];
+    fitText('+ ' + label(n), b.cx, b.cy - fs * .58, maxW, 600, fs);
+    fitText('$' + cost, b.cx, b.cy + fs * .68, maxW, 500, fs);
+    return;
+  }
+
+  // Built
+  const hot = n.queue && n.queue.length / (n.kind === 'server' ? SERVER_QCAP : DB_QCAP) > .55;
+  const pill = n.kind === 'internet' || n.kind === 'orders';
+  ctx.fillStyle = colors.node;
+  ctx.strokeStyle = (hot || n.flash > .3) ? colors.fail : colors.ink;
+  ctx.lineWidth = hot ? 2.5 : 1.5;
+  rr(b.x, b.y, b.w, b.h, pill ? b.h / 2 : 9); ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = colors.ink;
+  let sub = '';
+  if (n.kind === 'internet') sub = `${S.rps}/s`;
+  else if (n.kind === 'orders') sub = String(S.orders);
+  else if (n.kind === 'server') {
+    const idle = !N.lb.built && n !== firstServer();
+    sub = idle ? 'Idle, no LB' : `${Math.round(n.util * 100)}% busy`;
+  } else if (n.kind === 'db' || n.kind === 'replica') sub = `${Math.round(n.util * 100)}% busy`;
+  else if (n.kind === 'cache') sub = `${Math.round(S.hitRate * 100)}% hits`;
+  else if (n.kind === 'cdn') sub = 'Static files';
+  else if (n.kind === 'lb') sub = `${builtServers().length} server${builtServers().length > 1 ? 's' : ''}`;
+  const name = n.kind === 'db' && n.upgraded ? 'Database+' : label(n);
+  const meter = !pill && n.kind !== 'cdn' && n.kind !== 'lb';
+  const off = meter ? fs * .3 : 0;
+  fitText(name, b.cx, b.cy - fs * .6 - off, maxW, 600, fs);
+  ctx.fillStyle = colors['ink-soft'];
+  fitText(sub, b.cx, b.cy + fs * .62 - off, maxW, 500, fs);
+
+  // Load meter
+  if (n.kind === 'server' || n.kind === 'db' || n.kind === 'replica' || n.kind === 'cache') {
+    const v = n.kind === 'cache' ? S.hitRate / CACHE_TARGET : Math.min(1, n.util);
+    const mx = b.x + 8, my = b.y + b.h - 8, mw = b.w - 16;
+    ctx.fillStyle = colors.grid; rr(mx, my - 3, mw, 4, 2); ctx.fill();
+    ctx.fillStyle = n.kind === 'cache' ? colors.browse : v > .9 ? colors.fail : v > .7 ? colors.checkout : colors.browse;
+    rr(mx, my - 3, Math.max(2, mw * v), 4, 2); ctx.fill();
+  }
+  // Queue bar
+  if (n.queue && n.queue.length) {
+    const cap = n.kind === 'server' ? SERVER_QCAP : DB_QCAP;
+    const q = Math.min(1, n.queue.length / cap);
+    const qx = b.x + b.w + 4, qh = b.h * q;
+    ctx.fillStyle = q > .55 ? colors.fail : colors.checkout;
+    rr(qx, b.y + b.h - qh, 4, qh, 2); ctx.fill();
+  }
+}
+
+/* ---------- HUD ---------- */
+const fmtMoney = v => (v < 0 ? '−$' : '$') + Math.abs(Math.round(v)).toLocaleString('en-US');
+function clockText(t) {
+  let g = Math.floor((t - WARMUP) * CLOCK_SCALE) + 86400;
+  g = ((g % 86400) + 86400) % 86400;
+  const h = Math.floor(g / 3600), m = Math.floor(g / 60) % 60, s = g % 60;
+  return [h, m, s].map(x => String(x).padStart(2, '0')).join(':');
+}
+let hudTimer = 0;
+function updateHud() {
+  $('clock').firstChild.nodeValue = clockText(S.t);
+  $('phase').textContent = S.t < WARMUP ? 'Sale starts at midnight' : 'Hold on until 00:15';
+  $('cash').textContent = fmtMoney(S.cash);
+  const total = S.served + S.failed;
+  $('uptime').textContent = total ? (S.served / total * 100).toFixed(1) + '%' : '100%';
+  $('rps').textContent = S.rps;
+  $('orders').textContent = S.orders.toLocaleString('en-US');
+  const h = Math.max(0, S.health);
+  $('healthNum').textContent = Math.round(h);
+  const bar = $('healthBar');
+  bar.style.width = h + '%';
+  bar.style.background = h > 60 ? 'var(--browse)' : h > 30 ? 'var(--checkout)' : 'var(--fail)';
+
+  // Banner
+  const s = S.t - WARMUP;
+  const e = S.events.find(e => e.state === 'warning' || e.state === 'active' || (e.id === 'coldcache' && e.state === 'done' && s < (e.shownUntil || 0)));
+  const banner = $('banner');
+  if (e) {
+    banner.hidden = false;
+    banner.classList.toggle('warn', e.state === 'warning');
+    $('bannerTitle').textContent = e.state === 'warning' ? `In ${Math.max(1, Math.ceil(e.at - s))}s: ${e.title}` : e.title;
+    $('bannerText').textContent = e.text;
+    const frac = e.state === 'active' ? Math.max(0, (e.until - s) / e.dur) : e.state === 'warning' ? 1 : Math.max(0, (e.shownUntil - s) / 4);
+    $('bannerBar').style.width = frac * 100 + '%';
+  } else banner.hidden = true;
+
+  $('hint').style.display = S.t < WARMUP + 6 ? '' : 'none';
+  if (openNode) renderSheet();
+}
+
+/* ---------- Sheet (build / remove) ---------- */
+let openNode = null;
+function openSheet(n) { openNode = n; $('sheet').hidden = false; $('scrim').hidden = false; renderSheet(); }
+function closeSheet() { openNode = null; $('sheet').hidden = true; $('scrim').hidden = true; }
+
+function renderSheet() {
+  const n = openNode; if (!n) return;
+  const cat = CATALOG[n.kind];
+  $('sheetTitle').textContent = n.kind === 'db' && n.upgraded ? 'Database (upgraded)' : cat.name;
+  $('sheetDesc').textContent = cat.desc;
+  const rows = [];
+  const acts = [];
+  if (n.slot && !n.built) {
+    rows.push(['Build cost', fmtMoney(cat.cost)], ['Running cost', `$${cat.run}/s`]);
+    if (cat.cap) rows.push(['Capacity', `${cat.cap} units/s`]);
+    rows.push(['Your cash', fmtMoney(S.cash)]);
+    const can = S.cash >= cat.cost;
+    acts.push(`<button class="btn" data-act="build" ${can ? '' : 'disabled'}>${can ? `Build for ${fmtMoney(cat.cost)}` : `Need ${fmtMoney(cat.cost)}`}</button>`);
+  } else {
+    if (n.kind === 'server' || n.kind === 'db' || n.kind === 'replica') {
+      rows.push(['Busy', `${Math.round(n.util * 100)}%`], ['Waiting', `${n.queue.length} requests`], ['Capacity', `${capOf(n)} units/s`]);
+    }
+    if (n.kind === 'cache') rows.push(['Hit rate', `${Math.round(S.hitRate * 100)}%`]);
+    const runC = n.kind === 'db' ? cat.run + (n.upgraded ? cat.upRun : 0) : cat.run;
+    rows.push(['Running cost', `$${runC}/s`]);
+    if (n.kind === 'db' && !n.upgraded) {
+      const can = S.cash >= cat.upCost;
+      rows.push(['Upgrade', `${cat.upCap} units/s for +$${cat.upRun}/s`]);
+      acts.push(`<button class="btn" data-act="upgrade" ${can ? '' : 'disabled'}>${can ? `Upgrade for ${fmtMoney(cat.upCost)}` : `Need ${fmtMoney(cat.upCost)}`}</button>`);
+    }
+    const sellable = n.slot && !(n.kind === 'server' && builtServers().length <= 1);
+    if (sellable) acts.push(`<button class="btn danger" data-act="sell">Remove, refund ${fmtMoney(cat.cost / 2)}</button>`);
+  }
+  acts.push(`<button class="btn ghost" data-act="close">Close</button>`);
+  $('sheetStats').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  const html = acts.join('');
+  if ($('sheetActions').dataset.html !== html) { $('sheetActions').innerHTML = html; $('sheetActions').dataset.html = html; }
+}
+
+$('sheetActions').addEventListener('click', ev => {
+  const act = ev.target.closest('button')?.dataset.act; if (!act || !openNode) return;
+  const n = openNode, cat = CATALOG[n.kind];
+  if (act === 'build' && S.cash >= cat.cost) {
+    S.cash -= cat.cost; n.built = true; n.util = 0;
+    if (n.kind === 'cache') S.hitRate = 0;
+    S.built.add(cat.name);
+    closeSheet();
+  } else if (act === 'upgrade' && S.cash >= cat.upCost) {
+    S.cash -= cat.upCost; n.upgraded = true; S.built.add('Database upgrade'); closeSheet();
+  } else if (act === 'sell') {
+    n.built = false; S.cash += cat.cost / 2;
+    const q = n.queue.splice(0);
+    q.forEach(r => { r.rem = undefined; moveTo(r, n, n.kind === 'replica' ? N.db : pickServer()); });
+    closeSheet();
+  } else if (act === 'close') closeSheet();
+});
+$('scrim').addEventListener('pointerdown', closeSheet);
+
+canvas.addEventListener('pointerdown', ev => {
+  if (!running || paused || over) return;
+  const r = canvas.getBoundingClientRect();
+  const x = ev.clientX - r.left, y = ev.clientY - r.top;
+  for (const n of ALL) {
+    if (!(n.slot || n.kind === 'db')) continue;
+    const b = boxOf(n), m = 6;
+    if (x >= b.x - m && x <= b.x + b.w + m && y >= b.y - m && y <= b.y + b.h + m) { openSheet(n); return; }
+  }
+});
+
+/* ---------- Flow control ---------- */
+function start() {
+  S = freshState();
+  running = true; paused = false; over = false;
+  $('startScreen').hidden = true; $('endScreen').hidden = true; $('pauseScreen').hidden = true;
+  closeSheet();
+  updateHud();
+}
+function setPaused(p) {
+  if (!running || over) return;
+  paused = p;
+  $('pauseScreen').hidden = !p;
+  $('pauseBtn').textContent = p ? 'Resume' : 'Pause';
+  if (p) closeSheet(); else $('pauseBtn').focus({ preventScroll: true });
+}
+function finish(survived) {
+  over = true; running = false; closeSheet();
+  const total = S.served + S.failed;
+  const up = total ? S.served / total : 1;
+  const net = S.revenue - S.cost;
+  const score = Math.max(0, Math.round(Math.max(0, net) * up));
+  const prev = bestScore();
+  const isBest = score > prev;
+  if (isBest) store.set('bfr-best', score);
+  let grade = 'F';
+  if (survived) grade = up >= .995 ? 'S' : up >= .98 ? 'A' : up >= .95 ? 'B' : up >= .9 ? 'C' : 'D';
+
+  $('grade').textContent = grade;
+  $('endTitle').textContent = survived ? 'You survived Black Friday' : `The store went down at ${clockText(S.t).slice(0, 5)}`;
+  $('endSub').textContent = survived
+    ? (grade === 'S' ? 'Near-perfect uptime through the whole sale.' : 'The store stayed up until 00:15.')
+    : 'Too many requests failed and store health hit zero.';
+  const rows = [
+    ['Uptime', (up * 100).toFixed(1) + '%'],
+    ['Orders', S.orders.toLocaleString('en-US')],
+    ['Revenue', fmtMoney(S.revenue)],
+    ['Infrastructure cost', fmtMoney(-S.cost)],
+    ['Profit', fmtMoney(net)],
+    ['Peak traffic', `${S.peakRps} requests/s`],
+    ['Best score', (isBest ? score : prev).toLocaleString('en-US') + (isBest ? ' (new)' : '')],
+  ];
+  $('report').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('') +
+    `<dt class="total">Score</dt><dd class="total">${score.toLocaleString('en-US')}</dd>`;
+  $('builtList').innerHTML = [...S.built].map(b => `<li>${b}</li>`).join('');
+  $('lesson').textContent = lessonText(survived, up);
+  $('endScreen').hidden = false;
+  $('againBtn').focus({ preventScroll: true });
+}
+function lessonText(survived, up) {
+  const f = S.failsAt;
+  const worst = Object.entries(f).sort((a, b) => b[1] - a[1])[0];
+  if (!worst || worst[1] === 0) return 'Not a single failed request. That’s a well-sized architecture: enough capacity, nothing wasted.';
+  if (worst[0] === 'db' || worst[0] === 'replica') {
+    return N.cache.built
+      ? 'Your database was the bottleneck. A read replica or a bigger database instance gives orders room to save during spikes.'
+      : 'Your database was the bottleneck. A cache answers repeat product-page reads so the database can focus on saving orders.';
+  }
+  if (!N.lb.built && builtServers().length > 1) return 'You had extra servers, but without a load balancer all traffic went to the first one.';
+  if (!N.cdn.built) return 'Your servers were the bottleneck. A CDN takes images and stylesheets off them entirely, which is the cheapest capacity you can buy.';
+  return 'Your servers were the bottleneck. Add servers behind the load balancer before the big spikes, not during them.';
+}
+
+$('startBtn').addEventListener('click', start);
+$('againBtn').addEventListener('click', start);
+$('resumeBtn').addEventListener('click', () => setPaused(false));
+$('restartBtn').addEventListener('click', start);
+$('pauseBtn').addEventListener('click', () => setPaused(!paused));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (openNode) closeSheet(); else if (running && !over) setPaused(!paused); }
+  if (e.key === ' ' && running && !over && document.activeElement.tagName !== 'BUTTON') { e.preventDefault(); setPaused(!paused); }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden && running && !over) setPaused(true); });
+
+/* ---------- Main loop ---------- */
+let last = performance.now();
+function frame(now) {
+  let dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (running && !paused && !over) {
+    while (dt > 0 && !over) { const d = Math.min(1 / 60, dt); step(d); dt -= d; }
+    hudTimer += 1;
+    if (hudTimer % 6 === 0 && !over) updateHud();
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ---------- Init ---------- */
+const best = bestScore();
+if (best) $('bestLine').textContent = `Your best score: ${best.toLocaleString('en-US')}. `;
+S = freshState();
+readColors(); resize(); readColors();
+window.addEventListener('resize', () => { resize(); });
+darkMQ.addEventListener?.('change', readColors);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
