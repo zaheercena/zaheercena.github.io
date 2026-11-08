@@ -153,7 +153,32 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .built li{border:1.5px solid var(--line);border-radius:6px;padding:3px 9px;font-size:14px}
 .lesson{border-left:4px solid var(--checkout);padding:6px 0 6px 12px;margin:0 0 20px;line-height:1.45}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.levels{display:grid;gap:10px;margin:0 0 6px}
+.level{
+  display:block;text-align:left;width:100%;cursor:pointer;
+  background:transparent;border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;
+}
+.level:hover{border-color:var(--ink)}
+.level b{display:block;font-family:var(--display);font-weight:700;font-size:24px;line-height:1.1}
+.level span{display:block;color:var(--ink-soft);margin-top:3px;line-height:1.4}
+.level em{display:block;font-style:normal;font-size:13px;font-weight:600;margin-top:6px;color:var(--ink)}
+.level em:empty{display:none}
+.level.primary{border-color:var(--ink);border-width:2px}
+.hint .k{font-weight:700}
+.control{margin:0 0 14px}
+.control > span{display:block;font-size:14px;color:var(--ink-soft);margin-bottom:6px}
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper output{font-family:var(--display);font-weight:700;font-size:24px;min-width:92px;text-align:center;font-variant-numeric:tabular-nums}
+.stepper .btn{padding:8px 16px;font-size:20px;line-height:1}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg .btn{padding:9px 14px;font-size:15px}
+.seg .btn[aria-pressed="false"]{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.checklist{list-style:none;padding:0;margin:0 0 16px;display:grid;gap:6px}
+.checklist li{display:flex;gap:8px;align-items:center}
+.checklist .ok{color:var(--browse);font-weight:700}
+.checklist .no{color:var(--ink-soft);font-weight:700}
 @media (max-width:520px){
+  #wrBtn{display:none}
   .hud{gap:12px}
   .hud .stat.opt,.hud .spacer{display:none}
   .clock{font-size:26px}
@@ -168,11 +193,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 <header class="hud" aria-label="Store status">
   <div class="clock" id="clock">23:58:00<small id="phase">Sale starts at midnight</small></div>
   <div class="stat"><b id="cash">$600</b><span>Cash</span></div>
-  <div class="stat"><b id="uptime">100%</b><span>Uptime</span></div>
-  <div class="stat opt"><b id="rps">0</b><span>Requests/s</span></div>
-  <div class="stat opt"><b id="orders">0</b><span>Orders</span></div>
+  <div class="stat"><b id="uptime">100%</b><span id="uptimeLabel">Uptime</span></div>
+  <div class="stat opt"><b id="rps">0</b><span id="rpsLabel">Requests/s</span></div>
+  <div class="stat opt"><b id="orders">0</b><span id="ordersLabel">Orders</span></div>
   <div class="stat health"><span>Store health <b id="healthNum" style="font-size:12px;font-family:var(--body);font-weight:600">100</b></span><div class="bar"><i id="healthBar"></i></div></div>
   <div class="spacer"></div>
+  <button class="icon-btn" id="wrBtn" type="button" hidden>Waiting room: off</button>
   <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause game">Pause</button>
 </header>
 
@@ -189,7 +215,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   <h2 id="sheetTitle"></h2>
   <p class="desc" id="sheetDesc"></p>
   <dl id="sheetStats"></dl>
-  <div class="actions" id="sheetActions"></div>
+  <div id="sheetActions"></div>
 </section>
 
 <div class="overlay" id="startScreen">
@@ -199,15 +225,13 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <ul class="rules">
       <li>Tap a dashed slot to build infrastructure. Completed orders pay for it.</li>
       <li>Everything you build costs money to run each second, so build what you need.</li>
-      <li>Failed requests lower store health. At zero, the store goes down.</li>
+      <li>Errors lower store health. At zero, the store goes down.</li>
     </ul>
-    <div class="legend" aria-label="Request types">
-      <div><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="4" y="4" width="10" height="10" rx="1.5" fill="var(--static)"/></svg>Images and stylesheets</div>
-      <div><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="var(--browse)"/></svg>Product page views</div>
-      <div><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2 L16 9 L9 16 L2 9Z" fill="var(--checkout)"/></svg>Checkouts, the only requests that make money</div>
+    <div class="levels">
+      <button class="level primary" type="button" data-level="1"><b>Level 1: Midnight rush</b><span>Build a CDN, cache, load balancer and servers to survive a traffic surge.</span><em id="best1"></em></button>
+      <button class="level" type="button" data-level="2"><b>Level 2: Waiting room</b><span>Over 10,000 shoppers at once. Build a Fastly, API Gateway, Lambda and Redis waiting room to protect Adobe Commerce.</span><em id="best2"></em></button>
     </div>
-    <button class="btn" id="startBtn" type="button">Open the store</button>
-    <p class="foot"><span id="bestLine"></span>Built by <a href="https://www.linkedin.com/in/zaheercena/" target="_blank" rel="noopener">Zaheer Ahmad</a>, Solutions Architect. <a href="https://github.com/zaheercena" target="_blank" rel="noopener">GitHub</a></p>
+    <p class="foot">Built by <a href="https://www.linkedin.com/in/zaheercena/" target="_blank" rel="noopener">Zaheer Ahmad</a>, Solutions Architect. <a href="https://github.com/zaheercena" target="_blank" rel="noopener">GitHub</a></p>
   </div>
 </div>
 
@@ -228,7 +252,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div style="font-weight:600;font-size:15px">What you built</div>
     <ul class="built" id="builtList"></ul>
     <p class="lesson" id="lesson"></p>
-    <div class="actions"><button class="btn" id="againBtn" type="button">Play again</button></div>
+    <div class="actions"><button class="btn" id="nextBtn" type="button" hidden>Play level 2</button><button class="btn" id="againBtn" type="button">Play again</button><button class="btn ghost" id="menuBtn" type="button">Choose level</button></div>
     <p class="foot">Built by <a href="https://www.linkedin.com/in/zaheercena/" target="_blank" rel="noopener">Zaheer Ahmad</a>, Solutions Architect. Inspired by real peak-traffic architecture. <a href="https://github.com/zaheercena" target="_blank" rel="noopener">GitHub</a></p>
   </div>
 </div>
@@ -305,7 +329,7 @@ const ALL = Object.values(N);
 
 /* ---------- State ---------- */
 let S = null;
-let running = false, paused = false, over = false;
+let running = false, paused = false, over = false, level = 1;
 
 function freshState() {
   ALL.forEach(n => {
@@ -386,7 +410,8 @@ function pos(n) {
 function boxOf(n) {
   const p = pos(n);
   let w = nodeW, h = nodeH;
-  if (n.kind === 'internet' || n.kind === 'orders') { w = nodeW * .92; h = nodeH * .78; }
+  if (n.kind === 'internet' || n.kind === 'orders' || n.kind === 'shoppers') { w = nodeW * .92; h = nodeH * .78; }
+  if (n.big) { w = nodeW * 1.32; h = nodeH * 1.3; }
   return { x: p.x - w / 2, y: p.y - h / 2, w, h, cx: p.x, cy: p.y };
 }
 
@@ -642,9 +667,6 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
   }
 
-  // Nodes
-  for (const n of ALL) drawNode(n, fs);
-
   // Requests
   for (const r of S.reqs) {
     const p = pos(r.from), q = pos(r.to);
@@ -656,6 +678,10 @@ function draw() {
     else if (r.type === 'browse') { ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill(); }
     else { ctx.beginPath(); ctx.moveTo(x, y - s * 1.4); ctx.lineTo(x + s * 1.4, y); ctx.lineTo(x, y + s * 1.4); ctx.lineTo(x - s * 1.4, y); ctx.closePath(); ctx.fill(); }
   }
+
+  // Nodes
+  for (const n of ALL) drawNode(n, fs);
+
 
   // FX
   for (const f of S.fx) {
@@ -794,6 +820,7 @@ function openSheet(n) { openNode = n; $('sheet').hidden = false; $('scrim').hidd
 function closeSheet() { openNode = null; $('sheet').hidden = true; $('scrim').hidden = true; }
 
 function renderSheet() {
+  if (level === 2) return renderSheet2();
   const n = openNode; if (!n) return;
   const cat = CATALOG[n.kind];
   $('sheetTitle').textContent = n.kind === 'db' && n.upgraded ? 'Database (upgraded)' : cat.name;
@@ -823,12 +850,13 @@ function renderSheet() {
   }
   acts.push(`<button class="btn ghost" data-act="close">Close</button>`);
   $('sheetStats').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
-  const html = acts.join('');
+  const html = '<div class="actions">' + acts.join('') + '</div>';
   if ($('sheetActions').dataset.html !== html) { $('sheetActions').innerHTML = html; $('sheetActions').dataset.html = html; }
 }
 
 $('sheetActions').addEventListener('click', ev => {
   const act = ev.target.closest('button')?.dataset.act; if (!act || !openNode) return;
+  if (level === 2) return sheetAct2(act);
   const n = openNode, cat = CATALOG[n.kind];
   if (act === 'build' && S.cash >= cat.cost) {
     S.cash -= cat.cost; n.built = true; n.util = 0;
@@ -850,20 +878,570 @@ canvas.addEventListener('pointerdown', ev => {
   if (!running || paused || over) return;
   const r = canvas.getBoundingClientRect();
   const x = ev.clientX - r.left, y = ev.clientY - r.top;
-  for (const n of ALL) {
-    if (!(n.slot || n.kind === 'db')) continue;
+  const list = level === 1 ? ALL.filter(n => n.slot || n.kind === 'db') : ALL2.filter(n => n.kind !== 'shoppers' && n.kind !== 'orders');
+  for (const n of list) {
     const b = boxOf(n), m = 6;
     if (x >= b.x - m && x <= b.x + b.w + m && y >= b.y - m && y <= b.y + b.h + m) { openSheet(n); return; }
   }
 });
 
+/* =========================================================
+   LEVEL 2: Waiting room (Fastly VCL → API Gateway → Lambda → Redis)
+   ========================================================= */
+const D2 = 25;          // average shopper session, seconds
+const CONV2 = .08;      // share of sessions that end in an order
+const POLL2 = 15;       // waiting-room page re-checks every 15 s
+const QPAT2 = 60;       // average patience in the waiting room, seconds
+const NODE_CAP2 = 2500; // shoppers per Adobe Commerce app node
+const MAX_NODES2 = 8;
+
+const CAT2 = {
+  fastly:   { name: 'Fastly CDN',
+              desc: 'The edge in front of Adobe Commerce Cloud. With the waiting-room VCL installed, it checks each new shopper’s session cookie before letting them through.' },
+  vcl:      { name: 'Waiting-room VCL', cost: 500, run: 2,
+              desc: 'VCL snippets that read the session cookie, call the admission API, and serve the waiting-room page straight from the Fastly edge.' },
+  apigw:    { name: 'API Gateway', cost: 800, run: 5, cap: 1000, upCost: 800, upRun: 5, upCap: 5000, upName: 'Raise the throttle limit',
+              desc: 'The HTTP API that Fastly and the waiting-room page call to ask whether a shopper can come in.' },
+  lambda:   { name: 'Lambda', cost: 1200, run: 8, cap: 2000, upCost: 1500, upRun: 15, upCap: 10000, upName: 'Reserve more concurrency',
+              desc: 'A Node.js function that reads the live shopper count from Redis and answers allow or wait.' },
+  redis:    { name: 'ElastiCache Redis', cost: 1500, run: 15, cap: 3000, upCost: 2500, upRun: 25, upCap: 15000, upName: 'Switch to Serverless Redis',
+              desc: 'Stores every active session and the live shopper count. Serverless Redis scales automatically under heavy check traffic.' },
+  commerce: { name: 'Adobe Commerce', nodeCost: 5000, nodeRun: 40,
+              desc: 'Your storefront cluster. Each app node serves about 2,500 shoppers at once. Past that, pages start failing.' },
+  mysql:    { name: 'MySQL', run: 10, cap: 40, upCost: 4000, upRun: 30, upCap: 110, upName: 'Move to a larger instance',
+              desc: 'Saves every order. A higher shopper limit means more orders per second to save.' },
+};
+const CHAIN = ['vcl', 'apigw', 'lambda', 'redis'];
+
+const M = {
+  shoppers: { id: 'shoppers', kind: 'shoppers', u: .04, v: .5, built: true },
+  fastly:   { id: 'fastly', kind: 'fastly', u: .2, v: .5, built: true },
+  vcl:      { id: 'vcl', kind: 'vcl', slot: true, u: .36, v: .88 },
+  apigw:    { id: 'apigw', kind: 'apigw', slot: true, u: .36, v: .12 },
+  lambda:   { id: 'lambda', kind: 'lambda', slot: true, u: .56, v: .12 },
+  redis:    { id: 'redis', kind: 'redis', slot: true, u: .76, v: .12 },
+  commerce: { id: 'commerce', kind: 'commerce', u: .55, v: .5, built: true, big: true },
+  mysql:    { id: 'mysql', kind: 'mysql', u: .78, v: .5, built: true },
+  orders:   { id: 'orders', kind: 'orders', u: .955, v: .5, built: true },
+};
+const ALL2 = Object.values(M);
+let S2 = null;
+
+function fresh2() {
+  ALL2.forEach(n => { if (n.slot) n.built = false; n.up = false; n.flash = 0; });
+  const r = (a, b) => a + Math.random() * (b - a);
+  return {
+    t: 0, cash: 6000, health: 100, lastErr: -9,
+    active: 1400, queue: 0, nodes: 4, orderAcc: 0,
+    wr: { on: false, threshold: 10000, failOpen: false },
+    revenue: 0, cost: 0, orders: 0, gaveUp: 0, bounced: 0, arrived: 0,
+    pagesOk: 0, pagesErr: 0,
+    peakActive: 0, peakQueue: 0, peakChecks: 0,
+    A: 60, checkLoad: 0, checkCap: 0, fail: 0, bottleneck: null, err: 0, ordRate: 0, dbFail: 0,
+    loads: { apigw: 0, lambda: 0, redis: 0 }, caps: { apigw: 0, lambda: 0, redis: 0 },
+    errBy: { origin: 0, checks: 0, db: 0 },
+    flows: {}, emit: {}, parts: [], fx: [], fxAcc: {}, lastMoneyFx: 0,
+    built: new Set(['Fastly CDN', 'Adobe Commerce', 'MySQL']),
+    ev: {},
+    events: [
+      { id: 'doors', at: 0, dur: 12, title: 'Doors open', text: '1,600 shoppers a second are arriving at once.' },
+      { id: 'lambda', at: r(50, 58), dur: 12, title: 'Lambda functions timing out', text: 'Admission checks drop to 40% of capacity.' },
+      { id: 'influencer', at: r(80, 87), dur: 10, title: 'Influencer post', text: 'New arrivals jump 60%.' },
+      { id: 'redis', at: r(105, 111), dur: 8, title: 'Redis connection failed', text: 'Every admission check fails. Your fail mode decides who gets in.' },
+      { id: 'tv', at: r(128, 134), dur: 12, title: 'TV ad aired', text: 'New arrivals jump 50%.' },
+    ].map(e => ({ ...e, state: 'pending' })),
+  };
+}
+
+const chainBuilt = () => CHAIN.every(k => M[k].built);
+const cap2 = () => S2.nodes * NODE_CAP2;
+function rate2(t) {
+  if (t < WARMUP) return 60;
+  const s = t - WARMUP;
+  let r;
+  if (s < 15) r = 1600;
+  else if (s < 30) r = 1600 - 1200 * (s - 15) / 15;
+  else r = 400 + 500 * Math.min(1, (s - 30) / 120);
+  if (S2.ev.influencer) r *= 1.6;
+  if (S2.ev.tv) r *= 1.5;
+  return r;
+}
+function runCost2() {
+  let c = S2.nodes * CAT2.commerce.nodeRun + CAT2.mysql.run + (M.mysql.up ? CAT2.mysql.upRun : 0);
+  for (const k of CHAIN) if (M[k].built) c += CAT2[k].run + (M[k].up ? CAT2[k].upRun : 0);
+  return c;
+}
+
+function step2(dt) {
+  const st = S2;
+  st.t += dt;
+  const t = st.t, s = t - WARMUP;
+
+  // Events
+  for (const e of st.events) {
+    if (e.state === 'pending' && s >= e.at - 3) e.state = 'warning';
+    if (e.state === 'warning' && s >= e.at) { e.state = 'active'; e.until = e.at + e.dur; st.ev[e.id] = true; }
+    if (e.state === 'active' && s >= e.until) { e.state = 'done'; st.ev[e.id] = false; }
+  }
+
+  if (!chainBuilt()) st.wr.on = false;
+  const A = rate2(t); st.A = A;
+  const newArr = A * dt; st.arrived += newArr;
+
+  // Admission-check capacity: the weakest link in the chain sets the limit
+  st.caps.apigw = M.apigw.up ? CAT2.apigw.upCap : CAT2.apigw.cap;
+  st.caps.lambda = (M.lambda.up ? CAT2.lambda.upCap : CAT2.lambda.cap) * (st.ev.lambda ? .4 : 1);
+  st.caps.redis = st.ev.redis ? 0 : (M.redis.up ? CAT2.redis.upCap : CAT2.redis.cap);
+  const pollRate = st.wr.on ? st.queue / POLL2 : 0;
+  const load = st.wr.on ? A + pollRate : 0;
+  let capC = Infinity, bn = null;
+  for (const k of ['apigw', 'lambda', 'redis']) if (st.caps[k] < capC) { capC = st.caps[k]; bn = k; }
+  const f = load > 0 ? Math.max(0, load - capC) / load : 0;
+  st.checkLoad = load; st.checkCap = capC; st.fail = f; st.bottleneck = f > 0 ? bn : null;
+  st.peakChecks = Math.max(st.peakChecks, load);
+  // Load each stage actually sees (stages after a bottleneck see less)
+  let pass = load;
+  for (const k of ['apigw', 'lambda', 'redis']) { st.loads[k] = pass; pass = Math.min(pass, st.caps[k]); }
+
+  // Admission
+  let admit = 0, toQueue = 0;
+  if (st.wr.on) {
+    let free = Math.max(0, st.wr.threshold - st.active);
+    const admitQ = Math.min(st.queue, free, pollRate * (1 - f) * dt);
+    st.queue -= admitQ; free -= admitQ; admit += admitQ;
+    const newOk = newArr * (1 - f), newBad = newArr * f;
+    const admitN = Math.min(newOk, free);
+    admit += admitN; toQueue += newOk - admitN;
+    if (st.wr.failOpen) {
+      // A failed check lets the shopper straight in, whatever the limit says
+      const qBypass = Math.min(st.queue, pollRate * f * dt);
+      st.queue -= qBypass; admit += newBad + qBypass;
+    } else toQueue += newBad;
+    st.queue += toQueue;
+  } else admit = newArr;
+  st.active += admit;
+
+  // Patience in the waiting room
+  const quit = st.queue * dt / QPAT2;
+  st.queue -= quit; st.gaveUp += quit;
+
+  // Storefront capacity
+  const cap = cap2();
+  const e = st.active > cap ? (st.active - cap) / st.active : 0;
+  st.err = e;
+  const done = st.active * dt / D2;
+  st.active -= done;
+  const bounce = st.active * e * .35 * dt;
+  st.active -= bounce; st.bounced += bounce;
+
+  // Orders through MySQL
+  const want = done * CONV2 * (1 - e);
+  const dbCap = (M.mysql.up ? CAT2.mysql.upCap : CAT2.mysql.cap) * dt;
+  const ok = Math.min(want, dbCap), dbFail = want - ok;
+  st.ordRate = ok / dt; st.dbFail = dbFail / dt;
+  st.orderAcc += ok;
+  while (st.orderAcc >= 1) {
+    st.orderAcc -= 1; st.orders++;
+    const value = Math.round(12 + Math.random() * 12);
+    st.cash += value; st.revenue += value;
+    if (st.t - st.lastMoneyFx > .35) { addFx2('money', M.orders, `+$${value}`); st.lastMoneyFx = st.t; }
+  }
+
+  // Page health
+  const pages = st.active * dt / 5;
+  const errPages = pages * e + load * dt * f * .35 + dbFail * 5;
+  st.pagesOk += Math.max(0, pages - pages * e); st.pagesErr += errPages;
+  st.errBy.origin += pages * e; st.errBy.checks += load * dt * f * .35; st.errBy.db += dbFail * 5;
+  const signal = e * 25 + f * 3 + Math.min(10, st.dbFail * .5);
+  if (signal > .05) { st.health -= signal * dt; st.lastErr = t; }
+  else if (t - st.lastErr > 1.5) st.health = Math.min(100, st.health + 2 * dt);
+
+  st.peakActive = Math.max(st.peakActive, st.active);
+  st.peakQueue = Math.max(st.peakQueue, st.queue);
+
+  // Running costs
+  const run = runCost2();
+  st.cash -= run * dt; st.cost += run * dt;
+
+  // Visual flows (per second)
+  st.flows = {
+    arr: A, adm: admit / dt, qin: toQueue / dt, poll: pollRate,
+    chkA: st.wr.on ? A : 0, chk1: st.loads.lambda, chk2: st.loads.redis, ord: st.ordRate,
+  };
+  tickParticles2(dt);
+  // Error sparks
+  sparks2('origin', M.commerce, e * 30, dt);
+  if (bn) sparks2('checks', M[bn], f * 20, dt);
+  sparks2('db', M.mysql, st.dbFail, dt);
+  for (const n of ALL2) n.flash = Math.max(0, n.flash - dt * 2.5);
+
+  if (st.health <= 0) { st.health = 0; return finish2(false); }
+  if (t >= WARMUP + SALE) return finish2(true);
+}
+
+/* Particles are visual only: their density follows the simulated flows */
+function edges2() {
+  const E = [];
+  const on = S2.wr.on;
+  E.push({ a: M.shoppers, b: M.fastly, key: 'arr', type: 'browse' });
+  E.push({ a: M.fastly, b: M.commerce, key: 'adm', type: 'browse' });
+  E.push({ a: M.commerce, b: M.mysql, key: 'ord', type: 'checkout' });
+  E.push({ a: M.mysql, b: M.orders, key: 'ord', type: 'checkout' });
+  if (M.vcl.built) E.push({ a: M.fastly, b: M.vcl, key: 'qin', type: 'wait', dash: !on });
+  if (M.apigw.built) E.push({ a: M.fastly, b: M.apigw, key: 'chkA', type: 'static', dash: !on });
+  if (M.vcl.built && M.apigw.built) E.push({ a: M.vcl, b: M.apigw, key: 'poll', type: 'static', dash: !on });
+  if (M.apigw.built && M.lambda.built) E.push({ a: M.apigw, b: M.lambda, key: 'chk1', type: 'static', dash: !on });
+  if (M.lambda.built && M.redis.built) E.push({ a: M.lambda, b: M.redis, key: 'chk2', type: 'static', dash: !on });
+  return E;
+}
+function tickParticles2(dt) {
+  const st = S2;
+  for (const e of edges2()) {
+    const flow = st.flows[e.key] || 0;
+    const id = e.a.id + e.b.id;
+    if (flow <= 0) { st.emit[id] = 0; continue; }
+    st.emit[id] = (st.emit[id] || 0) + Math.min(24, Math.sqrt(flow) * .85) * dt;
+    while (st.emit[id] >= 1) {
+      st.emit[id] -= 1;
+      if (st.parts.length < 520) {
+        const dur = Math.max(.25, Math.hypot(e.b.u - e.a.u, e.b.v - e.a.v) / SPEED);
+        st.parts.push({ a: e.a, b: e.b, t: 0, dur, type: e.type });
+      }
+    }
+  }
+  for (let i = st.parts.length - 1; i >= 0; i--) {
+    const p = st.parts[i]; p.t += dt / p.dur;
+    if (p.t >= 1) st.parts.splice(i, 1);
+  }
+  for (let i = st.fx.length - 1; i >= 0; i--) {
+    const f = st.fx[i]; f.t += dt;
+    if (f.t > (f.kind === 'money' ? 1 : .6)) st.fx.splice(i, 1);
+  }
+}
+function sparks2(key, n, perSec, dt) {
+  if (perSec <= 0) return;
+  S2.fxAcc[key] = (S2.fxAcc[key] || 0) + Math.min(10, perSec) * dt;
+  while (S2.fxAcc[key] >= 1) { S2.fxAcc[key] -= 1; addFx2('fail', n); n.flash = 1; }
+}
+function addFx2(kind, n, data) {
+  if (S2.fx.length > 120) return;
+  const j = () => (Math.random() - .5) * nodeW * .6;
+  S2.fx.push({ kind, n, data, t: 0, dx: j() });
+}
+
+const fmtK = n => {
+  n = Math.max(0, n);
+  if (n < 1000) return String(Math.round(n));
+  return (n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '') + 'k';
+};
+
+function draw2() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (gridCanvas) ctx.drawImage(gridCanvas, 0, 0, W, H);
+  if (!S2) return;
+  const fs = Math.max(11, Math.min(15, nodeW * .13));
+
+  // Wires
+  ctx.lineWidth = 1.5;
+  for (const e of edges2()) {
+    const p = pos(e.a), q = pos(e.b);
+    ctx.strokeStyle = colors.line;
+    ctx.setLineDash(e.dash ? [4, 5] : []);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Particles
+  const sz = Math.max(3, nodeW * .04);
+  for (const p of S2.parts) {
+    const a = pos(p.a), b = pos(p.b);
+    const x = a.x + (b.x - a.x) * p.t, y = a.y + (b.y - a.y) * p.t;
+    if (p.type === 'wait') {
+      ctx.strokeStyle = colors['ink-soft']; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); ctx.stroke();
+    } else if (p.type === 'static') {
+      ctx.fillStyle = colors.static; ctx.fillRect(x - sz * .8, y - sz * .8, sz * 1.6, sz * 1.6);
+    } else if (p.type === 'checkout') {
+      ctx.fillStyle = colors.checkout;
+      ctx.beginPath(); ctx.moveTo(x, y - sz * 1.4); ctx.lineTo(x + sz * 1.4, y); ctx.lineTo(x, y + sz * 1.4); ctx.lineTo(x - sz * 1.4, y); ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillStyle = colors.browse; ctx.beginPath(); ctx.arc(x, y, sz, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  for (const n of ALL2) drawNode2(n, fs);
+
+
+  // FX
+  for (const f of S2.fx) {
+    const b = boxOf(f.n);
+    if (f.kind === 'fail') {
+      const k = f.t / .6, s = 5, x = b.cx + f.dx, y = b.y - 8 - k * 14;
+      ctx.strokeStyle = colors.fail; ctx.globalAlpha = 1 - k; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x - s, y - s); ctx.lineTo(x + s, y + s); ctx.moveTo(x + s, y - s); ctx.lineTo(x - s, y + s); ctx.stroke();
+    } else {
+      ctx.globalAlpha = 1 - f.t; ctx.fillStyle = colors.checkout; ctx.textAlign = 'center';
+      ctx.font = `700 ${fs + 3}px "Barlow Condensed", "Arial Narrow", system-ui, sans-serif`;
+      ctx.fillText(f.data, b.cx + f.dx, b.y - 6 - f.t * 26);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function nodeText2(n) {
+  const st = S2;
+  switch (n.kind) {
+    case 'shoppers': return ['Shoppers', `${fmtK(st.A)}/s arriving`];
+    case 'fastly': return ['Fastly CDN', st.wr.on ? `Limit ${fmtK(st.wr.threshold)}` : chainBuilt() ? 'Waiting room off' : 'Edge cache'];
+    case 'vcl': return ['Waiting room', `${fmtK(st.queue)} waiting`];
+    case 'apigw': return ['API Gateway', `${fmtK(st.loads.apigw)} / ${fmtK(st.caps.apigw)} req/s`];
+    case 'lambda': return ['Lambda', `${fmtK(st.loads.lambda)} / ${fmtK(st.caps.lambda)} checks/s`];
+    case 'redis': return [M.redis.up ? 'Serverless Redis' : 'ElastiCache Redis', st.ev.redis ? 'Connection failed' : `${fmtK(st.loads.redis)} / ${fmtK(st.caps.redis)} ops/s`];
+    case 'commerce': return ['Adobe Commerce', `${fmtK(st.active)} / ${fmtK(cap2())} shoppers`, `${st.nodes} app nodes`];
+    case 'mysql': return [M.mysql.up ? 'MySQL (large)' : 'MySQL', `${Math.round(st.ordRate)} / ${M.mysql.up ? CAT2.mysql.upCap : CAT2.mysql.cap} orders/s`];
+    case 'orders': return ['Orders', st.orders.toLocaleString('en-US')];
+  }
+  return [''];
+}
+function meter2(n) {
+  const st = S2;
+  if (n.kind === 'commerce') return st.active / cap2();
+  if (n.kind === 'mysql') return st.ordRate / (M.mysql.up ? CAT2.mysql.upCap : CAT2.mysql.cap);
+  if (n.kind === 'apigw' || n.kind === 'lambda' || n.kind === 'redis') return st.caps[n.kind] ? st.loads[n.kind] / st.caps[n.kind] : 1;
+  if (n.kind === 'vcl') return Math.min(1, st.queue / 40000);
+  return null;
+}
+function drawNode2(n, fs) {
+  const b = boxOf(n), maxW = b.w - 10;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (n.slot && !n.built) {
+    const cost = CAT2[n.kind].cost, afford = S2.cash >= cost;
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+    ctx.strokeStyle = afford ? colors.ink : colors.line; ctx.fillStyle = colors.paper;
+    rr(b.x, b.y, b.w, b.h, 9); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = afford ? colors.ink : colors['ink-soft'];
+    fitText('+ ' + CAT2[n.kind].name, b.cx, b.cy - fs * .58, maxW, 600, fs);
+    fitText('$' + cost.toLocaleString('en-US'), b.cx, b.cy + fs * .68, maxW, 500, fs);
+    return;
+  }
+  const pill = n.kind === 'shoppers' || n.kind === 'orders';
+  const hot = n.flash > .3 || (n.kind === 'commerce' && S2.err > 0) || (S2.bottleneck === n.kind);
+  ctx.fillStyle = colors.node;
+  ctx.strokeStyle = hot ? colors.fail : (n.kind === 'vcl' && S2.queue > 50) ? colors.checkout : colors.ink;
+  ctx.lineWidth = hot ? 2.5 : 1.5;
+  rr(b.x, b.y, b.w, b.h, pill ? b.h / 2 : 9); ctx.fill(); ctx.stroke();
+  const [name, sub, sub2] = nodeText2(n);
+  const m = pill ? null : meter2(n);
+  const off = m !== null ? fs * .3 : 0;
+  const lines = sub2 ? 3 : 2;
+  const y0 = b.cy - off - (lines === 3 ? fs * 1.1 : fs * .6);
+  ctx.fillStyle = colors.ink; fitText(name, b.cx, y0, maxW, 600, fs);
+  ctx.fillStyle = colors['ink-soft']; fitText(sub, b.cx, y0 + fs * 1.22, maxW, 500, fs);
+  if (sub2) fitText(sub2, b.cx, y0 + fs * 2.4, maxW, 500, fs * .92);
+  if (m !== null) {
+    const v = Math.max(0, Math.min(1, m));
+    const mx = b.x + 8, my = b.y + b.h - 8, mw = b.w - 16;
+    ctx.fillStyle = colors.grid; rr(mx, my - 3, mw, 4, 2); ctx.fill();
+    const failing = n.kind === 'commerce' ? S2.err > 0 : n.kind === 'mysql' ? S2.dbFail > 0 : S2.bottleneck === n.kind;
+    ctx.fillStyle = n.kind === 'vcl' ? colors['ink-soft'] : failing ? colors.fail : v > .85 ? colors.checkout : colors.browse;
+    rr(mx, my - 3, Math.max(2, mw * v), 4, 2); ctx.fill();
+  }
+}
+
+function updateHud2() {
+  const st = S2;
+  $('clock').firstChild.nodeValue = clockText(st.t);
+  $('phase').textContent = st.t < WARMUP ? 'Sale starts at midnight' : 'Hold on until 00:15';
+  $('cash').textContent = fmtMoney(st.cash);
+  $('uptime').textContent = fmtK(st.active);
+  $('rps').textContent = fmtK(st.queue);
+  const tot = st.pagesOk + st.pagesErr;
+  $('orders').textContent = tot ? (st.pagesOk / tot * 100).toFixed(1) + '%' : '100%';
+  const h = Math.max(0, st.health);
+  $('healthNum').textContent = Math.round(h);
+  $('healthBar').style.width = h + '%';
+  $('healthBar').style.background = h > 60 ? 'var(--browse)' : h > 30 ? 'var(--checkout)' : 'var(--fail)';
+  $('wrBtn').textContent = `Waiting room: ${st.wr.on ? 'on' : 'off'}`;
+
+  const s = st.t - WARMUP;
+  const e = st.events.find(e => e.state === 'warning' || e.state === 'active');
+  const banner = $('banner');
+  if (e) {
+    banner.hidden = false;
+    banner.classList.toggle('warn', e.state === 'warning');
+    $('bannerTitle').textContent = e.state === 'warning' ? `In ${Math.max(1, Math.ceil(e.at - s))}s: ${e.title}` : e.title;
+    $('bannerText').textContent = e.text;
+    $('bannerBar').style.width = (e.state === 'active' ? Math.max(0, (e.until - s) / e.dur) : 1) * 100 + '%';
+  } else banner.hidden = true;
+  $('hint').style.display = st.t < WARMUP + 6 ? '' : 'none';
+  if (openNode) renderSheet2();
+}
+
+function renderSheet2() {
+  const n = openNode; if (!n) return;
+  const st = S2, cat = CAT2[n.kind];
+  let title = cat.name, desc = cat.desc;
+  const rows = [], acts = [];
+  let controls = '';
+  if (n.slot && !n.built) {
+    rows.push(['Build cost', fmtMoney(cat.cost)], ['Running cost', `$${cat.run}/s`]);
+    if (cat.cap) rows.push(['Capacity', `${cat.cap.toLocaleString('en-US')} checks/s`]);
+    rows.push(['Your cash', fmtMoney(st.cash)]);
+    const can = st.cash >= cat.cost;
+    acts.push(`<button class="btn" data-act="build" ${can ? '' : 'disabled'}>${can ? `Build for ${fmtMoney(cat.cost)}` : `Need ${fmtMoney(cat.cost)}`}</button>`);
+  } else if (n.kind === 'fastly') {
+    if (!chainBuilt()) {
+      desc += ' To turn on the waiting room, build all four pieces:';
+      controls = '<ul class="checklist">' + CHAIN.map(k => `<li><span class="${M[k].built ? 'ok' : 'no'}">${M[k].built ? '✓' : '○'}</span>${CAT2[k].name}${M[k].built ? '' : ` ($${CAT2[k].cost.toLocaleString('en-US')})`}</li>`).join('') + '</ul>';
+    } else {
+      title = `Waiting room: ${st.wr.on ? 'on' : 'off'}`;
+      desc = 'When shoppers on the site reach your limit, new arrivals see the waiting-room page from the Fastly edge until a spot opens.';
+      rows.push(['On site', `${fmtK(st.active)} of ${fmtK(cap2())} capacity`], ['Waiting', fmtK(st.queue)], ['Check traffic', `${fmtK(st.checkLoad)} / ${fmtK(st.checkCap)} per s`]);
+      if (st.wr.threshold > cap2()) rows.push(['Warning', `Your limit is above what Adobe Commerce can serve (${cap2().toLocaleString('en-US')}).`]);
+      controls =
+        `<div class="control"><span>Let shoppers in until there are</span><div class="stepper"><button class="btn ghost" data-act="thr-" aria-label="Lower the limit">−</button><output>${st.wr.threshold.toLocaleString('en-US')}</output><button class="btn ghost" data-act="thr+" aria-label="Raise the limit">+</button></div></div>` +
+        `<div class="control"><span>If an admission check fails</span><div class="seg"><button class="btn" data-act="open" aria-pressed="${st.wr.failOpen}">Let them in</button><button class="btn" data-act="closed" aria-pressed="${!st.wr.failOpen}">Keep them waiting</button></div></div>`;
+      acts.push(`<button class="btn" data-act="wr">${st.wr.on ? 'Turn waiting room off' : 'Turn waiting room on'}</button>`);
+    }
+  } else if (n.kind === 'commerce') {
+    rows.push(['App nodes', `${st.nodes} of ${MAX_NODES2}`], ['Capacity', `${cap2().toLocaleString('en-US')} shoppers`], ['On site', fmtK(st.active)], ['Running cost', `$${st.nodes * cat.nodeRun}/s`]);
+    if (st.nodes < MAX_NODES2) {
+      const can = st.cash >= cat.nodeCost;
+      acts.push(`<button class="btn" data-act="addnode" ${can ? '' : 'disabled'}>${can ? `Add a node for ${fmtMoney(cat.nodeCost)}` : `Need ${fmtMoney(cat.nodeCost)}`}</button>`);
+    }
+    if (st.nodes > 2) acts.push(`<button class="btn danger" data-act="rmnode">Remove a node, refund ${fmtMoney(cat.nodeCost / 2)}</button>`);
+  } else if (n.kind === 'vcl') {
+    rows.push(['Waiting now', fmtK(st.queue)], ['Gave up so far', fmtK(st.gaveUp)], ['Limit', st.wr.on ? st.wr.threshold.toLocaleString('en-US') : 'Waiting room off']);
+    desc += ' Waiting shoppers re-check every 15 seconds, so a long queue adds admission traffic.';
+  } else {
+    const isUp = n.up;
+    if (n.kind === 'mysql') rows.push(['Orders saved', `${Math.round(st.ordRate)}/s`], ['Capacity', `${isUp ? cat.upCap : cat.cap} orders/s`]);
+    else {
+      rows.push(['Traffic', `${fmtK(st.loads[n.kind])}/s`], ['Capacity', `${fmtK(st.caps[n.kind])}/s`]);
+      if (isUp && n.kind === 'redis') title = 'Serverless Redis';
+    }
+    rows.push(['Running cost', `$${cat.run + (isUp ? cat.upRun : 0)}/s`]);
+    if (!isUp) {
+      const can = st.cash >= cat.upCost;
+      rows.push(['Upgrade', `${cat.upName}: ${cat.upCap.toLocaleString('en-US')}/s for +$${cat.upRun}/s`]);
+      acts.push(`<button class="btn" data-act="upgrade" ${can ? '' : 'disabled'}>${can ? `Upgrade for ${fmtMoney(cat.upCost)}` : `Need ${fmtMoney(cat.upCost)}`}</button>`);
+    }
+  }
+  acts.push(`<button class="btn ghost" data-act="close">Close</button>`);
+  $('sheetTitle').textContent = title;
+  $('sheetDesc').textContent = desc;
+  $('sheetStats').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  const html = controls + '<div class="actions">' + acts.join('') + '</div>';
+  if ($('sheetActions').dataset.html !== html) { $('sheetActions').innerHTML = html; $('sheetActions').dataset.html = html; }
+}
+
+function sheetAct2(act) {
+  const n = openNode, st = S2, cat = CAT2[n.kind];
+  if (act === 'close') return closeSheet();
+  if (act === 'build' && st.cash >= cat.cost) {
+    st.cash -= cat.cost; n.built = true; st.built.add(cat.name);
+    if (chainBuilt()) { closeSheet(); return openSheet(M.fastly); }
+    return closeSheet();
+  }
+  if (act === 'upgrade' && st.cash >= cat.upCost) {
+    st.cash -= cat.upCost; n.up = true; st.built.add(n.kind === 'redis' ? 'Serverless Redis' : `${cat.name} upgrade`);
+    return closeSheet();
+  }
+  if (act === 'addnode' && st.cash >= cat.nodeCost && st.nodes < MAX_NODES2) {
+    st.cash -= cat.nodeCost; st.nodes++;
+  } else if (act === 'rmnode' && st.nodes > 2) {
+    st.nodes--; st.cash += cat.nodeCost / 2;
+  } else if (act === 'wr' && chainBuilt()) {
+    st.wr.on = !st.wr.on; if (st.wr.on) st.built.add('Waiting room');
+  } else if (act === 'thr-') st.wr.threshold = Math.max(2000, st.wr.threshold - 1000);
+  else if (act === 'thr+') st.wr.threshold = Math.min(20000, st.wr.threshold + 1000);
+  else if (act === 'open') st.wr.failOpen = true;
+  else if (act === 'closed') st.wr.failOpen = false;
+  renderSheet2(); updateHud2();
+}
+
+function finish2(survived) {
+  over = true; running = false; closeSheet();
+  const st = S2;
+  const tot = st.pagesOk + st.pagesErr;
+  const up = tot ? st.pagesOk / tot : 1;
+  const net = st.revenue - st.cost;
+  const score = Math.max(0, Math.round(Math.max(0, net) * up));
+  const prev = parseInt(store.get('bfr-best-2') || '0', 10) || 0;
+  const isBest = score > prev;
+  if (isBest) store.set('bfr-best-2', score);
+  let grade = 'F';
+  if (survived) grade = up >= .995 ? 'S' : up >= .98 ? 'A' : up >= .95 ? 'B' : up >= .9 ? 'C' : 'D';
+  $('grade').textContent = grade;
+  $('endTitle').textContent = survived ? 'The waiting room held' : `The store went down at ${clockText(st.t).slice(0, 5)}`;
+  $('endSub').textContent = survived ? 'Adobe Commerce stayed up through the whole sale.' : 'Too many errors and store health hit zero.';
+  const rows = [
+    ['Uptime', (up * 100).toFixed(1) + '%'],
+    ['Orders', st.orders.toLocaleString('en-US')],
+    ['Revenue', fmtMoney(st.revenue)],
+    ['Infrastructure cost', fmtMoney(-st.cost)],
+    ['Profit', fmtMoney(net)],
+    ['Peak shoppers on site', Math.round(st.peakActive).toLocaleString('en-US')],
+    ['Longest waiting-room queue', Math.round(st.peakQueue).toLocaleString('en-US')],
+    ['Gave up waiting', Math.round(st.gaveUp).toLocaleString('en-US')],
+    ['Best score', (isBest ? score : prev).toLocaleString('en-US') + (isBest ? ' (new)' : '')],
+  ];
+  $('report').innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('') +
+    `<dt class="total">Score</dt><dd class="total">${score.toLocaleString('en-US')}</dd>`;
+  const built = [...st.built].map(b => b.startsWith('Adobe Commerce') ? `Adobe Commerce (${st.nodes} nodes)` : b);
+  $('builtList').innerHTML = [...new Set(built)].map(b => `<li>${b}</li>`).join('');
+  $('lesson').textContent = lesson2();
+  $('nextBtn').hidden = true;
+  $('endScreen').hidden = false;
+  $('againBtn').focus({ preventScroll: true });
+}
+function lesson2() {
+  const st = S2, eb = st.errBy;
+  const total = eb.origin + eb.checks + eb.db;
+  const gaveFrac = st.arrived ? st.gaveUp / st.arrived : 0;
+  if (total > 50) {
+    const worst = Object.entries(eb).sort((a, b) => b[1] - a[1])[0][0];
+    if (worst === 'origin') return st.wr.on
+      ? 'Adobe Commerce still overloaded. Keep the waiting-room limit at or below your cluster capacity: each app node serves about 2,500 shoppers.'
+      : 'Adobe Commerce overloaded. A waiting room caps how many shoppers are on the site at once, so the cluster never takes more than it can serve.';
+    if (worst === 'checks') return 'Admission checks were the bottleneck. Every waiting shopper re-checks the API, so a long queue multiplies check traffic. Scale API Gateway, Lambda and Redis together, and choose a safe fail mode for outages.';
+    return 'MySQL couldn’t save orders fast enough. A higher shopper limit needs a larger database instance.';
+  }
+  if (gaveFrac > .12) return `${Math.round(st.gaveUp).toLocaleString('en-US')} shoppers gave up in the waiting room. More app nodes and a higher limit would have turned more of them into orders.`;
+  return 'Clean run: the limit matched your cluster, the check chain kept up with the queue, and outages failed safely.';
+}
+
 /* ---------- Flow control ---------- */
-function start() {
-  S = freshState();
+function start(lv) {
+  if (lv) level = lv;
+  if (level === 1) S = freshState(); else S2 = fresh2();
   running = true; paused = false; over = false;
+  setupHudLabels();
   $('startScreen').hidden = true; $('endScreen').hidden = true; $('pauseScreen').hidden = true;
   closeSheet();
-  updateHud();
+  if (level === 1) updateHud(); else updateHud2();
+}
+function setupHudLabels() {
+  const l2 = level === 2;
+  $('uptimeLabel').textContent = l2 ? 'On site' : 'Uptime';
+  $('rpsLabel').textContent = l2 ? 'Waiting' : 'Requests/s';
+  $('ordersLabel').textContent = l2 ? 'Uptime' : 'Orders';
+  $('wrBtn').hidden = !l2;
+  $('hint').innerHTML = l2
+    ? 'Build the four waiting-room pieces, then tap Fastly to turn it on. <span class="k" style="color:var(--browse)">●</span> shoppers <span class="k" style="color:var(--ink-soft)">○</span> waiting <span class="k" style="color:var(--static)">■</span> admission checks <span class="k" style="color:var(--checkout)">◆</span> orders'
+    : 'Tap a dashed slot to build. <span class="k" style="color:var(--static)">■</span> images and stylesheets <span class="k" style="color:var(--browse)">●</span> page views <span class="k" style="color:var(--checkout)">◆</span> checkouts, the only ones that pay';
+  $('hint').style.display = '';
+}
+function showMenu() {
+  over = true; running = false; closeSheet();
+  $('endScreen').hidden = true; $('pauseScreen').hidden = true;
+  refreshBest();
+  $('startScreen').hidden = false;
+}
+function refreshBest() {
+  const b1 = bestScore(), b2 = parseInt(store.get('bfr-best-2') || '0', 10) || 0;
+  $('best1').textContent = b1 ? `Your best: ${b1.toLocaleString('en-US')}` : '';
+  $('best2').textContent = b2 ? `Your best: ${b2.toLocaleString('en-US')}` : '';
 }
 function setPaused(p) {
   if (!running || over) return;
@@ -902,6 +1480,7 @@ function finish(survived) {
     `<dt class="total">Score</dt><dd class="total">${score.toLocaleString('en-US')}</dd>`;
   $('builtList').innerHTML = [...S.built].map(b => `<li>${b}</li>`).join('');
   $('lesson').textContent = lessonText(survived, up);
+  $('nextBtn').hidden = !survived;
   $('endScreen').hidden = false;
   $('againBtn').focus({ preventScroll: true });
 }
@@ -919,10 +1498,13 @@ function lessonText(survived, up) {
   return 'Your servers were the bottleneck. Add servers behind the load balancer before the big spikes, not during them.';
 }
 
-$('startBtn').addEventListener('click', start);
-$('againBtn').addEventListener('click', start);
+document.querySelectorAll('.level').forEach(b => b.addEventListener('click', () => start(+b.dataset.level)));
+$('againBtn').addEventListener('click', () => start(level));
+$('nextBtn').addEventListener('click', () => start(2));
+$('menuBtn').addEventListener('click', showMenu);
+$('wrBtn').addEventListener('click', () => { if (running && !paused && !over && level === 2) openSheet(M.fastly); });
 $('resumeBtn').addEventListener('click', () => setPaused(false));
-$('restartBtn').addEventListener('click', start);
+$('restartBtn').addEventListener('click', () => start(level));
 $('pauseBtn').addEventListener('click', () => setPaused(!paused));
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (openNode) closeSheet(); else if (running && !over) setPaused(!paused); }
@@ -935,17 +1517,16 @@ let last = performance.now();
 function frame(now) {
   let dt = Math.min(.1, (now - last) / 1000); last = now;
   if (running && !paused && !over) {
-    while (dt > 0 && !over) { const d = Math.min(1 / 60, dt); step(d); dt -= d; }
+    while (dt > 0 && !over) { const d = Math.min(1 / 60, dt); if (level === 1) step(d); else step2(d); dt -= d; }
     hudTimer += 1;
-    if (hudTimer % 6 === 0 && !over) updateHud();
+    if (hudTimer % 6 === 0 && !over) { if (level === 1) updateHud(); else updateHud2(); }
   }
-  draw();
+  if (level === 1) draw(); else draw2();
   requestAnimationFrame(frame);
 }
 
 /* ---------- Init ---------- */
-const best = bestScore();
-if (best) $('bestLine').textContent = `Your best score: ${best.toLocaleString('en-US')}. `;
+refreshBest();
 S = freshState();
 readColors(); resize(); readColors();
 window.addEventListener('resize', () => { resize(); });
